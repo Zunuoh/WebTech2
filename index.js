@@ -1,6 +1,7 @@
 let express = require('express');
 const path = require('path');
 let app = express();
+const bcrypt = require('bcrypt');
 
 
 app.set('view engine', 'ejs');
@@ -12,9 +13,6 @@ app.use(express.static('public'));
  app.use(bodyparser.urlencoded({
      extended : true
  }));
-// url: 'mongodb://localhost/mongo-proj'
-
-
 
 // connecting to the db
 let url = 'mongodb://localhost:27017/hallRegistration';
@@ -52,13 +50,6 @@ app.get("/", (req,res) => {
     });
 });
 
-// app.post("/save", (req, res) => {
-//   let jnelson = req.body.jnelson;
-//   let vhall = req.body.vhall;
-
-//   let hallData = {jnelson : jnelson, }
-// })
-
 app.get("/register", (req, res) => {
     res.render("reg")
 });
@@ -81,43 +72,51 @@ app.post("/register", (req, res)=>{
     student.level = req.body.regLevel;
     student.age = req.body.regAge;
     bcrypt.genSalt(10, function(err, salt){
-        bcrypt.hash(student.password, salt, function(err))
-    })
-    student.save((err, docs) =>{
-        if(err)throw err;
-        res.redirect("/save");
+        bcrypt.hash(student.pin, salt, function(err, hash){
+            student.pin = hash;
+            student.save((err, docs) =>{
+                if(err)throw err;
+                res.redirect("/save");
+            })
+        })
+    });
+    
     });
  
-});
 
-app.post("/save", (res,req) =>{
-    // console.log(req.body);
+
+app.post("/save", (req,res) =>{
+    console.log(req.body);
     let residence = new Residence();
     residence.hallName = req.body.hallSelc;
     residence.room = req.body.roomSel;
-    // residence.save((err, docs) =>{
-    //     if(err)throw err;
-    //     res.redirect("/reg")
-    // });
-    res.send(req.body);
+    residence.save((err, docs) =>{
+        if(err)throw err;
+        res.redirect("/display")
+    });
+    // res.send(req.body);
     
 });
 
-app.post("/signin", async(res,req)=>{
+app.post("/signin", async(req,res)=>{
     try{
-        const student = await Student.findOne({name:req.body.regID});
-        bcrpt.compare(req.body.regPIN, student.regPIN, (err, isMatch)=>{
+        const student = await Student.findOne({id:req.body.regID});
+        bcrypt.compare(req.body.regPIN, student.pin, (err, isMatch)=>{
             if(isMatch){
-                res.redirect("/reg")
+                res.redirect("/display")
             }
             else{
-                res.send("okay");
+                res.send("okay")
             }
         }); 
     } catch(err){
         console.log("lost");
     }
 })
+
+app.get("/display", (req,res)=>{
+    res.render("display")
+});
 
 
 
